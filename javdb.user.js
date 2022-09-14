@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         JavDB 尝试修改
-// @version      1.0.1
+// @version      1.0.2
 // @description  在影片详情页添加跳转到在线观看网站的按钮，并检查对应是否存在资源，如果对应网站上存在该资源则为绿色，否则显示红色，顺便检测有无中文字幕。
 // @author       sikro
 // @match        https://javdb.com/*
