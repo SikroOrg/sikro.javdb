@@ -1,310 +1,355 @@
 // ==UserScript==
-// @name         JavDB 尝试修改
-// @version      1.0.2
-// @description  在影片详情页添加跳转到在线观看网站的按钮，并检查对应是否存在资源，如果对应网站上存在该资源则为绿色，否则显示红色，顺便检测有无中文字幕。
+// @name         JavDB 添加跳转在线观看(修改 for mission522 https://greasyfork.org/users/58790)
+// @version      1.0.4
 // @author       sikro
-// @match        https://javdb.com/*
-// @include      /^https:\/\/(\w*\.)?javdb(\d)*\.com.*$/
-// @icon         https://javdb.com/favicon-32x32.png
+// @description  在影片详情页添加跳转到在线观看网站的按钮，并检查对应是否存在资源，如果对应网站上存在该资源则为绿色，否则显示红色，顺便检测有无中文字幕。
 // @license      MIT
+// @icon         https://javdb.com/favicon-32x32.png
+// @include      /^https:\/\/(\w*\.)?javdb(\d)*\.com.*$/
+// @match        *://*.javdb.com/*
 // @connect      jable.tv
 // @connect      missav.com
 // @connect      javhhh.com
 // @connect      netflav.com
-// @connect      javbus.com
 // @connect      avgle.com
 // @connect      bestjavporn.com
 // @connect      jav.guru
 // @connect      javmost.cx
 // @connect      hpjav.tv
 // @connect      av01.tv
-// @connect      停用mm-cg.com
-// @connect      translate.google.cn
-// @connect      translate.google.com
-// @connect      *
-// @grant        GM_xmlhttpRequest
+// @connect      javbus.com
+// @connect      javmenu.com
+// @connect      javfc2.net
+// @connect      paipancon.com
+// @connect      ggjav.com
 // @grant        GM_addStyle
-// @namespace http://tampermonkey.net/
+// @grant        GM_xmlhttpRequest
 // ==/UserScript==
-
 "use strict";
 
-/** 网站列表 */
-const site = [
+var _a, _b, _c, _d;
+var r = (_a = Reflect.get(document, "__monkeyWindow")) != null ? _a : window;
+r.GM;
+r.unsafeWindow = (_b = r.unsafeWindow) != null ? _b : window;
+r.unsafeWindow;
+r.GM_info;
+r.GM_cookie;
+var l = (...e) => r.GM_addStyle(...e), b = (...e) => r.GM_xmlhttpRequest(...e);
+const jdbStyle = `
+    .button-g {
+        font-size: .75rem;
+        margin:0.35rem 0.75rem 0.35rem 0;
+    }
+    .has-subtitle::before {
+        position: absolute;
+        content: "\u5B57\u5E55";
+        padding: 1px;
+        top: -8px;
+        left: -3px;
+        line-height: 1;
+        color: white;
+        background: green;
+    }
+    .has-leakage::after {
+        position: absolute;
+        content: "\u65E0\u7801";
+        padding: 1px;
+        top: -8px;
+        left: 30px;
+        line-height: 1;
+        color: white;
+        background: green;
+    }
+`;
+
+const temp = () => {
+};
+
+const siteList = [
     {
-        id: 0,
         name: "Jable",
         hostname: "jable.tv",
-        url: "https://jable.tv/videos/(code)/",
-        search: false,
+        url: "https://jable.tv/videos/{{code}}/",
+        fetcher: "get",
         domQuery: { subQuery: ".header-right>h6" },
-        methods: temp,
+        method: temp
     },
     {
-        id: 1,
         name: "MISSAV",
         hostname: "missav.com",
-        url: "https://missav.com/(code)/",
-        search: false,
+        url: "https://missav.com/{{code}}/",
+        fetcher: "get",
         domQuery: {
-            subQuery: '.space-y-2>.text-nord4>a[href="https://missav.com/chinese-subtitle"]',
-            leakQuery: "div.mb-5.p-2.rounded-lg.bg-nord11 ",
+            subQuery: '.space-y-2 a.text-nord13[href="https://missav.com/chinese-subtitle"]',
+            leakQuery: ".order-first div.rounded-md a[href]:last-child"
         },
-        methods: temp,
+        method: temp
     },
     {
-        id: 2,
         name: "NETFLAV",
         hostname: "netflav.com",
-        url: "https://netflav.com/search?type=title&keyword=(code)",
-        search: true,
+        url: "https://netflav.com/search?type=title&keyword={{code}}",
+        fetcher: "parser",
         domQuery: { linkQuery: ".grid_cell>a", titleQuery: ".grid_cell>a>.grid_title" },
-        methods: temp,
+        method: temp
     },
     {
-        id: 3,
         name: "Avgle",
         hostname: "avgle.com",
-        url: "https://avgle.com/search/videos?search_query=(code)&search_type=videos",
-        search: true,
+        url: "https://avgle.com/search/videos?search_query={{code}}&search_type=videos",
+        fetcher: "parser",
         domQuery: {
             linkQuery: ".container>.row .row .well>a[href]",
-            titleQuery: ".container>.row .row .well .video-title",
+            titleQuery: ".container>.row .row .well .video-title"
         },
-        methods: temp,
+        method: temp
     },
     {
-        id: 4,
         name: "JAVHHH",
         hostname: "javhhh.com",
-        url: "https://javhhh.com/v/?wd=(code)",
-        search: true,
+        url: "https://javhhh.com/v/?wd={{code}}",
+        fetcher: "parser",
         domQuery: {
             linkQuery: ".typelist>.i-container>a[href]",
-            titleQuery: ".typelist>.i-container>a[href]",
+            titleQuery: ".typelist>.i-container>a[href]"
         },
-        methods: temp,
+        method: temp
     },
     {
-        id: 5,
         name: "BestJavPorn",
-        hostname: "BestJavPorn.com",
-        url: "https://www2.bestjavporn.com/search/(code)/",
-        search: true,
+        hostname: "bestjavporn.com",
+        url: "https://www3.bestjavporn.com/search/{{code}}",
+        fetcher: "parser",
         domQuery: { linkQuery: "article.thumb-block>a", titleQuery: "article.thumb-block>a" },
-        methods: temp,
+        method: temp
     },
     {
-        id: 6,
+        name: "JAVMENU",
+        hostname: "javmenu.com",
+        url: "https://javmenu.com/{{code}}",
+        fetcher: "get",
+        domQuery: {
+            videoQuery: "a.nav-link[aria-controls='pills-0']"
+        },
+        method: temp
+    },
+    {
         name: "Jav.Guru",
         hostname: "jav.guru",
-        url: "https://jav.guru/?s=(code)",
-        search: true,
+        url: "https://jav.guru/?s={{code}}",
+        fetcher: "parser",
         domQuery: { linkQuery: ".imgg>a[href]", titleQuery: ".inside-article>.grid1 a[title]" },
-        methods: temp,
+        method: temp
     },
     {
-        id: 7,
         name: "JAVMOST",
         hostname: "javmost.cx",
-        url: "https://javmost.cx/search/(code)/",
-        search: true,
+        url: "https://javmost.cx/search/{{code}}/",
+        fetcher: "parser",
         domQuery: {
-            linkQuery: "#content .card>a[href]",
-            titleQuery: "#content .card-block .card-title",
+            linkQuery: "#content .card a#MyImage",
+            titleQuery: "#content .card-block .card-title"
         },
-        methods: temp,
+        method: temp
     },
     {
-        id: 8,
-        name: "HPJAV",
-        hostname: "hpjav.tv",
-        url: "https://hpjav.tv/tw?s=(code)",
-        search: true,
-        domQuery: { linkQuery: ".entry-title a[href]", titleQuery: ".entry-title a[href]" },
-        methods: temp,
+        name: "JAVFC2",
+        hostname: "javfc2.net",
+        url: "https://javfc2.net/?s={{code}}",
+        fetcher: "parser",
+        domQuery: {
+            linkQuery: "article.loop-video>a[href]",
+            titleQuery: "article.loop-video .entry-header"
+        },
+        method: temp
     },
     {
-        id: 9,
+        name: "baihuse",
+        hostname: "paipancon.com",
+        url: "https://paipancon.com/search/{{code}}",
+        fetcher: "parser",
+        domQuery: {
+            linkQuery: "div.col>div.card>a[href]",
+            titleQuery: "div.card img.card-img-top"
+        },
+        method: temp
+    },
+    {
+        name: "GGJAV",
+        hostname: "ggjav.com",
+        url: "https://ggjav.com/main/search?string={{code}}",
+        fetcher: "parser",
+        domQuery: {
+            listIndex: 1,
+            spaceCode: true,
+            titleQuery: "div.columns.large-3.medium-6.small-12.item.float-left>div.item_title>a.gray_a",
+            linkQuery: "div.columns.large-3.medium-6.small-12.item.float-left>div.item_title>a.gray_a"
+        },
+        method: temp
+    },
+    {
         name: "AV01",
         hostname: "av01.tv",
-        url: "https://www.av01.tv/search/videos?search_query=(code)",
-        search: true,
+        url: "https://www.av01.tv/search/videos?search_query={{code}}",
+        fetcher: "parser",
         domQuery: { linkQuery: "div[id].well-sm>a", titleQuery: ".video-views>.pull-left" },
-        methods: temp,
+        method: temp
     },
     {
-        id: 10,
         name: "JavBus",
+        disable: "jbus",
         hostname: "javbus.com",
-        url: "https://javbus.com/(code)",
-        search: false,
-        domQuery: null,
-        methods: temp,
-    },
+        url: "https://javbus.com/{{code}}",
+        fetcher: "get",
+        domQuery: {},
+        method: temp
+    }
 ];
 
-/** 字幕等样式 */
-function addStyle() {
-    GM_addStyle(
-        '.provide-sub::before {  position:absolute;  content:"字幕";  padding: 1px;  top:-5px;  left:-3px;  line-height:1;  color:white;  background: green;}',
-    );
-    GM_addStyle(
-        `.provide-leak::after {  position:absolute;  content:"无码";  padding: 1px;  top:-5px;  left:30px;  line-height:1;  color:white;  background: green;}`,
-    );
+// window.location.hostname.match(/^.*?\.?(.*)\.com$/)[1] === "javdb" ? "jdb" : "jbus";
+
+const ENV = "jdb";
+
+const jdbCode = (_c = document.querySelector(`[data-clipboard-text]`)) == null ? void 0 : _c.dataset.clipboardText;
+(_d = document.querySelector(`span[style="color:#CC0000;"]`)) == null ? void 0 : _d.innerText.replace("\u590D\u5236", "");
+
+const envCode = jdbCode;
+
+function videoPageParser(responseText, { subQuery, leakQuery, videoQuery }) {
+    const doc = new DOMParser().parseFromString(responseText, "text/html");
+    const subNode = subQuery ? doc.querySelector(subQuery) : "";
+    const subNodeText = subNode ? subNode.innerHTML : "";
+    const leakNode = leakQuery ? doc.querySelector(leakQuery) : null;
+    const videoNode = videoQuery ? doc.querySelector(videoQuery) : true;
+    return {
+        isSuccess: !!videoNode,
+        hasSubtitle: subNodeText.includes("\u5B57\u5E55") || subNodeText.includes("subtitle"),
+        hasLeakage: !!leakNode
+    };
 }
 
-/** 查找是否包含字幕、无码的 tag 信息 */
-function querytag(dom, button) {
-    if (this.domQuery === null) {
-        return;
-    }
-    const SubQueryStr =
-        this.domQuery.subQuery === undefined ? this.domQuery.titleQuery : this.domQuery.subQuery;
-    const LeakQueryStr = this.domQuery.leakQuery;
-    if (
-        dom.querySelector(SubQueryStr)?.innerText.includes("字幕") ||
-        dom.querySelector(SubQueryStr)?.innerText.includes("subtitle")
-    ) {
-        button.classList.add("provide-sub");
-    }
-    if (dom.querySelector(LeakQueryStr)) {
-        button.classList.add("provide-leak");
-    }
-}
-
-function temp() {
-    return;
-}
-
-/** 传入网站，处理网站 */
-function getWebsite(site) {
-    let videoCode = document.querySelector("[data-clipboard-text]").attributes[2].value;
-
-    if (videoCode.includes("FC2")) {
-        videoCode =
-            site.name === "Jable" ? videoCode.replace("FC2", "fc2ppv") : videoCode.replace("FC2-", "");
-    }
-
-    if (videoCode.includes("复制")) {
-        videoCode = videoCode.replace("复制", "");
-    }
-
-    let xhrResult = "";
-    const siteUrl = site.url.replace("(code)", videoCode);
-
-    const buttonG = document.createElement("a");
-    document.querySelectorAll(".panel-block div.buttons")[1].appendChild(buttonG);
-    buttonG.classList.add("button", "is-info", "is-outlined", "button-g");
-    buttonG.innerHTML = site.name;
-    buttonG.setAttribute("target", "_blank");
-    buttonG.href = siteUrl;
-
-    xhr(xhrResult);
-}
-
-function setbuttonGColor(color) {
-    buttonG.style.color = color;
-    buttonG.style.borderColor = color;
-}
-
-function xhr(xhrResult) {
-    GM_xmlhttpRequest({
-        method: "GET",
-        url: siteUrl,
-        onload: function (result) {
-            xhrResult = result.status;
-            console.log(`---${site.name} onload,${xhrResult},-${siteUrl}`);
-            const xhrDOM = new DOMParser().parseFromString(result.responseText, "text/html");
-
-            if (site.search) {
-                let linkElement = xhrDOM.querySelectorAll(site.domQuery.linkQuery)[0];
-                let titleElement = xhrDOM.querySelectorAll(site.domQuery.titleQuery)[0];
-
-                if (linkElement != undefined && titleElement.outerHTML.includes(videoCode)) {
-                    buttonG.href = linkElement.href.replace(linkElement.hostname, site.hostname);
-                } else {
-                    xhrResult = 404;
-                }
-            }
-            xhrResult == 404 ? setbuttonGColor("red") : setbuttonGColor("green");
-
-            if (xhrResult != 404) {
-                querytag.call(site, xhrDOM, buttonG);
-            }
-        },
-        onerror: function (result) {
-            console.log(`---${site.hostname} onerror`, xhrResult);
-            console.log(result);
-            setbuttonGColor("red");
-        },
-    });
-}
-
-/** 谷歌翻译 */
-function translateTitle() {
-    let isTranslated = false;
-    const ButtonTran = document.createElement("h2");
-    const h2title = document.querySelector("h2.title.is-4");
-    h2title.style.cursor = "pointer";
-    h2title.appendChild(ButtonTran);
-    ButtonTran.classList.add("title", "is-6", "button_t");
-    ButtonTran.innerHTML = "翻译";
-    ButtonTran.style.display = "none";
-    ButtonTran.style.border = "1px solid #3e8ed";
-
-    h2title.addEventListener("mouseover", () => {
-        ButtonTran.style.display = "inline";
-    });
-    h2title.addEventListener("mouseout", () => {
-        if (!isTranslated) {
-            ButtonTran.style.display = "none";
+function serachPageParser(responseText, { linkQuery, titleQuery, listIndex = 0, spaceCode = false }, siteHostName) {
+    const doc = new DOMParser().parseFromString(responseText, "text/html");
+    const linkNode = linkQuery ? doc.querySelectorAll(linkQuery)[listIndex] : null;
+    const titleNode = titleQuery ? doc.querySelectorAll(titleQuery)[listIndex] : null;
+    const titleNodeText = titleNode ? titleNode == null ? void 0 : titleNode.outerHTML : "";
+    function query() {
+        const envCodeWithSpace = spaceCode ? envCode.replace("-", " ") : envCode;
+        const condition = linkNode && titleNode && (titleNodeText.includes(envCodeWithSpace) || titleNodeText.includes(envCode));
+        if (condition) {
+            return {
+                isSuccess: true,
+                targetLink: linkNode.href.replace(linkNode.hostname, siteHostName),
+                hasLeakage: titleNodeText.includes("\u65E0\u7801") || titleNodeText.includes("Uncensored"),
+                hasSubtitle: titleNodeText.includes("\u5B57\u5E55") || titleNodeText.includes("subtitle")
+            };
+        } else {
+            return { targetLink: "", isSuccess: false };
         }
-    });
+    }
+    return query();
+}
 
-    ButtonTran.addEventListener("click", getTranslate);
-
-    // const data = {
-    //     client: "gtx",
-    //     dt: "t",
-    //     dj: 1,
-    //     ie: "UTF-8",
-    //     sl: "auto", //目的类型
-    //     tl: "zh-CN", //目标语言
-    //     q: h2title.innerHTML,
-    // };
-    // const requestUrl = "https://translate.google.cn/translate_a/single?" + Qs.stringify(data);
-
-    const queryStr = `client=gtx&dt=t&dj=1&ie=UTF-8&sl=auto&tl=zh-CN&q=${h2title.innerHTML}`;
-    const requestUrl = `https://translate.google.cn/translate_a/single?${queryStr}`;
-    function getTranslate() {
-        if (isTranslated) {
-            return;
-        }
-        GM_xmlhttpRequest({
+async function xhr(siteItem, siteUrl) {
+    const xhrPromise = new Promise((resolve) => {
+        b({
             method: "GET",
-            url: requestUrl,
-            onload: function (res) {
-                const json = JSON.parse(res.responseText);
-                ButtonTran.innerHTML = json.sentences[0].trans;
-                isTranslated = true;
+            url: siteUrl,
+            onload: (response) => {
+                if (siteItem.fetcher === "get") {
+                    if (response.status === 404) {
+                        resolve({
+                            isSuccess: false,
+                            targetLink: siteUrl,
+                            name: siteItem.name,
+                            msg: "\u5E94\u8BE5\u662F\u6CA1\u6709\u8D44\u6E90"
+                        });
+                    } else {
+                        const { hasSubtitle, hasLeakage, isSuccess } = videoPageParser(
+                            response.responseText,
+                            siteItem.domQuery
+                        );
+                        resolve({
+                            isSuccess,
+                            targetLink: siteUrl,
+                            name: siteItem.name,
+                            hasSubtitle,
+                            hasLeakage,
+                            msg: "[get]\uFF0C\u5B58\u5728\u8D44\u6E90"
+                        });
+                    }
+                } else if (siteItem.fetcher === "parser") {
+                    const { targetLink, isSuccess, hasLeakage, hasSubtitle } = serachPageParser(
+                        response.responseText,
+                        siteItem.domQuery,
+                        siteItem.hostname
+                    );
+                    resolve({
+                        name: siteItem.name,
+                        isSuccess,
+                        targetLink: isSuccess ? targetLink : siteUrl,
+                        hasSubtitle,
+                        hasLeakage,
+                        msg: "[parser]\u5B58\u5728\u8D44\u6E90"
+                    });
+                }
             },
+            onerror: (error) => {
+                resolve({
+                    isSuccess: false,
+                    targetLink: siteUrl,
+                    name: siteItem.name,
+                    msg: error.error
+                });
+            }
         });
-    }
+    });
+    return xhrPromise;
+}
+function createPanelNode() {
+    const parentNodeQueryString = `.panel.movie-panel-info`;
+    const parentNode = document.querySelector(parentNodeQueryString);
+    const panelNode = document.createElement("div");
+    parentNode && parentNode.appendChild(panelNode);
+    panelNode.classList.add("panel-block", "column");
+    return panelNode;
 }
 
-function vPage() {
-    translateTitle();
-    site.forEach((item) => {
-        getWebsite(item);
+function createButtonNode(panelNode, siteItemName, siteUrl) {
+    const buttonNode = document.createElement("a");
+    buttonNode.setAttribute("target", "_blank");
+    panelNode.appendChild(buttonNode);
+    const buttonClassList = ["button", "is-info", "is-outlined"];
+    buttonClassList.forEach((item) => {
+        buttonNode.classList.add(item, "button-g");
+    });
+    buttonNode.innerHTML = siteItemName;
+    buttonNode.href = siteUrl;
+    return {
+        buttonNode,
+        setButtonStatus: (targetLink, color, hasLeakage = false, hasSubtitle = false) => {
+            buttonNode.href = targetLink;
+            buttonNode.style.color = color;
+            buttonNode.style.borderColor = color;
+            buttonNode.style.backgroundColor = buttonNode.style.backgroundColor;
+            hasLeakage && buttonNode.classList.add("has-leakage");
+            hasSubtitle && buttonNode.classList.add("has-subtitle");
+        }
+    };
+}
+
+function main() {
+    l(jdbStyle);
+    const panelNode = createPanelNode();
+    const envSiteList = siteList.filter((item) => {
+        return item.disable !== ENV;
+    });
+    envSiteList.forEach(async (item) => {
+        const siteUrl = item.url.replace("{{code}}", envCode);
+        const { setButtonStatus } = createButtonNode(panelNode, item.name, siteUrl);
+        const { isSuccess, hasLeakage, hasSubtitle, targetLink } = await xhr(item, siteUrl);
+        setButtonStatus(targetLink, isSuccess ? "green" : "red", hasLeakage, hasSubtitle);
     });
 }
 
-const curLocation = location.pathname;
-if (document.querySelector(".tabs.is-boxed")) {
-    console.log("mainPage");
-} else if (curLocation.includes("/v/") && document.querySelector("h2")) {
-    console.log("vPage");
-    vPage();
-    addStyle();
-}
+main();
